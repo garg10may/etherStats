@@ -1,8 +1,5 @@
 import requests
 
-address= '0x57d90b64a1a57749b0f932f1a3395792e12e7055'
-
-apikey = 'QDZZNB41B2NMCYNZ7ENYSVQAFGMQ43EDHE'
 
 class EtherStats(object):
 
@@ -10,7 +7,7 @@ class EtherStats(object):
     #initialized None so that the ones which are not used in a particular API
     #don't cause a error, since it a GET query missing keyvalues won't cause an issue
     self.url = 'https://api.etherscan.io/api'
-    self.apikey = apikey
+    self.apikey = None
     self.module = None
     self.action = None
     self.contractaddress = None
@@ -36,17 +33,18 @@ class EtherStats(object):
     try:
       r = requests.get(self.url, params)
       response = r.json()
-      return response['result']
+      return response
     except Exception as e:
       raise
 
 class EtherAccountStats(EtherStats):
   """API for finding accounts stats for a given Ether address"""
 
-  def __init__(self, address, module='account'):
+  def __init__(self, address, apikey, module='account'):
     super(EtherAccountStats, self).__init__()
     self.module = module
     self.address = address
+    self.apikey = apikey
 
   def getBalance(self):
     """Get Ether Balance for a single Address"""
@@ -55,7 +53,7 @@ class EtherAccountStats(EtherStats):
     return super(EtherAccountStats, self)._apiQuery()
 
 
-  def getBalanceMultiple(self, addresses):
+  def getBalanceMultiple(self, addressList):
     """Get Ether Balance for multiple Addresses in a single call
     
     :param addresses: list of addresses
@@ -68,11 +66,11 @@ class EtherAccountStats(EtherStats):
     """
     self.action = 'balancemulti'
     self.tag = 'latest'
+    self.address = addressList
     return super(EtherAccountStats, self)._apiQuery()
 
 
-  def getNormalTransactions(self, page=None, offset=None, startblock=0, endblock=99999999,
-                                  sort='asc' ):
+  def getNormalTransactions(self, page=None, offset=None, startblock=0, endblock=99999999, sort='asc' ):
     """Get a list of 'Normal' Transactions by Address
 
     Note: (Returns up to a maximum of the last 10000 transactions only)
@@ -94,13 +92,15 @@ class EtherAccountStats(EtherStats):
     return super(EtherAccountStats, self)._apiQuery()
 
 
-  def getInternalTransactions(self, startblock=0, endblock=2702578):
+  def getInternalTransactions(self, page=None, offset=None, startblock=0, endblock=2702578, sort='asc'):
     """Get a list of 'Internal' Transactions by Address
     [Optional Parameters] startblock: starting blockNo to retrieve results, endblock: ending blockNo to retrieve results
     """
-    self.action = txlistinternal
+    self.action = 'txlistinternal'
     self.startblock = startblock
     self.endblock = endblock
+    self.page = page
+    self.offset = offset
     return super(EtherAccountStats, self)._apiQuery()
 
 
@@ -111,10 +111,11 @@ class EtherAccountStats(EtherStats):
 
 class EtherContractsStats(EtherStats):
 
-  def __init__(self, address, module='contract'):
+  def __init__(self, address, apikey, module='contract'):
     super(EtherContractsStats, self).__init__()
     self.mdoule = module
     self.address = address
+    self.apikey = apikey
 
   def getContractABI(self):
     """Get Contract ABI for Verified Contraact Source Codes
@@ -126,10 +127,11 @@ class EtherContractsStats(EtherStats):
 
 class EtherTransactionStats(EtherStats):
 
-  def __init__(self, address, module='transaction'):
+  def __init__(self, address, apikey, module='transaction'):
     super(EtherTransactionStats, self).__init__()
     self.module = module
     self.address = address
+    self.apikey = apikey
 
   def checkExecutionStatus(self):
     """[BETA] check contract Execution status (if there was an error during contract execution)
@@ -139,10 +141,11 @@ class EtherTransactionStats(EtherStats):
     return super(EtherTransactionStats, self)._apiQuery()
 
 class EtherBlockStats(EtherStats):
-  def __init__(self, address, module='block'):
+  def __init__(self, address, apikey, module='block'):
     super(EtherBlockStats, self).__init__()
     self.module = module
     self.address = address
+    self.apikey = apikey
 
   def getBlockRewards(self, blockno = '2165403'):
     self.action = 'getblockreward'
@@ -157,7 +160,8 @@ class EtherEventLogs(EtherStats):
   topic0, topic1, topic2, topic3 (32 Bytes per topic)
   topic0_1_opr (and|or between topic0 & topic1),
   topic1_2_opr (and|or between topic1 & topic2),
-  topic2_3_opr (and|or between topic2 & topic3),
+  topic2_3_opr (and|or between t[{u'account': u'0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae', u'balance': u'740021582819750779479303'}]
+opic2 & topic3),
   topic0_2_opr (and|or between topic0 & topic2)
 
   * fromBlock and toBlock accepts the blocknumber (integer, NOT hex) or 'latest' (earliest & pending is NOT supported yet)
@@ -167,10 +171,11 @@ class EtherEventLogs(EtherStats):
   * For performance & security considerations, only the first 1000 results are return. So please narrow down the filter parameters
 
   """
-  def __init__(self, address, module='logs'):
+  def __init__(self, address, apikey, module='logs'):
     super(EtherBlockStats, self).__init__()
     self.module = module
     self.address = address
+    self.apikey = apikey
 
   def getEventLogs(self,fromBlock, toBlock, topic0, topic1, topic2, topic3,
                     topic0_1_opr, topic1_2_opr, topic2_3_opr, topic0_2_opr):
@@ -192,9 +197,10 @@ class EtherEventLogs(EtherStats):
       self.topic0_2_opr = topic0_2_opr
 
 class EtherTokenStats(EtherStats):
-  def __init__(self, address):
+  def __init__(self, address,apikey):
     super(EtherTokenStats, self).__init__()
     self.contractaddress = address
+    self.apikey = apikey
 
   def getTokenSupply(self):
     """Get ERC20-Token TotalSupply by ContractAddress"""
@@ -210,7 +216,8 @@ class EtherTokenStats(EtherStats):
 
 
 if __name__ == '__main__':
-  e = EtherAccountStats(address)
-  print e.getBalance()
-  e = EtherTokenStats(address)
-  print e.getTokenSupply()
+  address = '0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae'
+  apikey = 'QDZZNB41B2NMCYNZ7ENYSVQAFGMQ43EDHE'
+  e = EtherAccountStats(address, apikey)
+  print e.getInternalTransactions()
+
